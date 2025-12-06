@@ -1,4 +1,4 @@
-package com.example.comfortablepandaapp.ui.theme
+package com.example.pandaapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

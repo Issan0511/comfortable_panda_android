@@ -7,8 +7,9 @@ import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.example.pandaapp.R
 import com.example.pandaapp.data.model.Assignment
+import com.example.pandaapp.ui.component.createAssignmentRemoteViews
+import com.example.pandaapp.ui.component.sortAssignments
 import com.example.pandaapp.util.AssignmentStore
-import com.example.pandaapp.util.formatEpochSecondsToJst
 
 class AssignmentWidgetService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
@@ -41,16 +42,7 @@ private class AssignmentRemoteViewsFactory(
 
     override fun getViewAt(position: Int): RemoteViews {
         val assignment = assignments[position]
-        val remoteViews = RemoteViews(context.packageName, R.layout.widget_assignment_item)
-
-        remoteViews.setTextViewText(R.id.widget_course_name, assignment.courseName)
-        remoteViews.setTextViewText(R.id.widget_assignment_title, assignment.title)
-
-        val dueLabel = assignment.dueTimeSeconds?.let { "期限: ${formatEpochSecondsToJst(it)}" } ?: "期限: -"
-        val statusLabel = assignment.status?.let { "状態: $it" } ?: "状態: -"
-
-        remoteViews.setTextViewText(R.id.widget_assignment_due, dueLabel)
-        remoteViews.setTextViewText(R.id.widget_assignment_status, statusLabel)
+        val remoteViews = createAssignmentRemoteViews(context, assignment)
 
         val fillInIntent = Intent().apply {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
@@ -70,14 +62,6 @@ private class AssignmentRemoteViewsFactory(
 
     private fun loadAssignments() {
         val storedAssignments = assignmentStore.load().assignments
-        val now = System.currentTimeMillis() / 1000
-        val (futureAssignments, pastAssignments) = storedAssignments.partition {
-            it.dueTimeSeconds != null && it.dueTimeSeconds > now
-        }
-
-        val sorted = futureAssignments.sortedBy { it.dueTimeSeconds } +
-            pastAssignments.sortedByDescending { it.dueTimeSeconds }
-
-        assignments = sorted
+        assignments = sortAssignments(storedAssignments)
     }
 }

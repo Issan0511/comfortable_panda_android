@@ -1,6 +1,11 @@
 package com.example.pandaapp
 
 import android.app.Application
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,8 +30,37 @@ import com.example.pandaapp.ui.theme.PandaAppTheme
 import com.example.pandaapp.util.AssignmentStore
 import com.example.pandaapp.util.CredentialsStore
 import com.example.pandaapp.util.NewAssignmentNotifier
+import com.example.pandaapp.worker.AssignmentFetchWorker
+import java.util.concurrent.TimeUnit
 
-class App : Application()
+class App : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        scheduleAssignmentFetch()
+    }
+
+    private fun scheduleAssignmentFetch() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val workRequest = PeriodicWorkRequestBuilder<AssignmentFetchWorker>(
+            15, TimeUnit.MINUTES
+        )
+            .setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
+    }
+
+    private companion object {
+        const val WORK_NAME = "assignment_fetch_periodic"
+    }
+}
 
 @Composable
 fun PandaAppRoot() {
@@ -71,6 +105,7 @@ fun PandaAppRoot() {
                 composable(MAIN_ROUTE) {
                     val viewModel: MainViewModel = viewModel(
                         factory = MainViewModel.provideFactory(
+                            context,
                             repository,
                             credentialsStore,
                             assignmentStore,

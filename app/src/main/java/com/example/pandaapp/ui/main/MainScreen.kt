@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -19,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.pandaapp.data.model.Assignment
+import com.example.pandaapp.ui.component.AssignmentItemComposable
 import com.example.pandaapp.util.formatEpochSecondsToJst
 
 @Composable
@@ -74,18 +74,7 @@ private fun AssignmentList(assignments: List<Assignment>) {
         modifier = Modifier.fillMaxSize()
     ) {
         items(assignments) { assignment ->
-            Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                Text(text = assignment.courseName, style = MaterialTheme.typography.titleMedium)
-                Text(text = assignment.title, style = MaterialTheme.typography.bodyLarge)
-                assignment.dueTimeSeconds?.let {
-                    val formattedDate = formatEpochSecondsToJst(it)
-                    Text(text = "Due: $formattedDate", style = MaterialTheme.typography.bodySmall)
-                }
-                assignment.status?.let {
-                    Text(text = "Status: $it", style = MaterialTheme.typography.bodySmall)
-                }
-                Divider(modifier = Modifier.padding(top = 8.dp))
-            }
+            AssignmentItemComposable(assignment = assignment)
         }
     }
 }

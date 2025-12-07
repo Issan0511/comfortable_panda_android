@@ -1,5 +1,10 @@
 package com.example.pandaapp.ui.main
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,6 +13,7 @@ import com.example.pandaapp.data.repository.PandaRepository
 import com.example.pandaapp.util.AssignmentStore
 import com.example.pandaapp.util.CredentialsStore
 import com.example.pandaapp.util.NewAssignmentNotifier
+import com.example.pandaapp.widget.AssignmentWidgetProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +31,8 @@ class MainViewModel(
     private val repository: PandaRepository,
     private val credentialsStore: CredentialsStore,
     private val assignmentStore: AssignmentStore,
-    private val newAssignmentNotifier: NewAssignmentNotifier
+    private val newAssignmentNotifier: NewAssignmentNotifier,
+    private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainScreenState())
@@ -62,6 +69,9 @@ class MainViewModel(
                 if (newAssignments.isNotEmpty()) {
                     newAssignmentNotifier.notify(newAssignments)
                 }
+
+                // ウィジェット更新通知
+                updateWidgets()
 
                 val sortedAssignments = sortAssignments(freshAssignments)
                 _uiState.update {
@@ -109,8 +119,24 @@ class MainViewModel(
 
     private fun currentEpochSeconds(): Long = System.currentTimeMillis() / 1000
 
+    private fun updateWidgets() {
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val componentName = ComponentName(context, AssignmentWidgetProvider::class.java)
+        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+        
+        if (appWidgetIds.isNotEmpty()) {
+            val intent = Intent(context, AssignmentWidgetProvider::class.java).apply {
+                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+            }
+            context.sendBroadcast(intent)
+            Log.d("MainViewModel", "Widget update broadcast sent for ${appWidgetIds.size} widgets")
+        }
+    }
+
     companion object {
         fun provideFactory(
+            context: Context,
             repository: PandaRepository,
             credentialsStore: CredentialsStore,
             assignmentStore: AssignmentStore,
@@ -123,7 +149,8 @@ class MainViewModel(
                         repository,
                         credentialsStore,
                         assignmentStore,
-                        newAssignmentNotifier
+                        newAssignmentNotifier,
+                        context
                     ) as T
                 }
             }

@@ -6,4 +6,7 @@
     <string name="notification_new_assignment_message">%1$s</string>
     <string name="widget_title">課題一覧</string>
     <string name="widget_empty">保存された課題がありません</string>
+    <string name="widget_refresh">更新</string>
+    <string name="widget_reload">reload</string>
+    <string name="widget_reloading">reloading...</string>
 </resources>

@@ -1,9 +1,6 @@
 package com.example.pandaapp.worker
 
-import android.appwidget.AppWidgetManager
 import android.content.Context
-import android.content.ComponentName
-import android.content.Intent
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -11,6 +8,11 @@ import com.example.pandaapp.data.repository.PandaRepository
 import com.example.pandaapp.util.AssignmentStore
 import com.example.pandaapp.util.CredentialsStore
 import com.example.pandaapp.util.NewAssignmentNotifier
+
+// ★ 追加 import
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import com.example.pandaapp.R
 import com.example.pandaapp.widget.AssignmentWidgetProvider
 
 class AssignmentFetchWorker(
@@ -41,12 +43,28 @@ class AssignmentFetchWorker(
 
             val now = currentEpochSeconds()
             assignmentStore.save(distinctAssignments, lastUpdatedEpochSeconds = now)
+
             if (newAssignments.isNotEmpty()) {
                 notifier.notify(newAssignments)
             }
 
-            // ウィジェット更新通知
-            updateWidgets(context)
+            // ★ ここから追加: ウィジェット全体を更新
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+            val componentName = ComponentName(context, AssignmentWidgetProvider::class.java)
+            val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+
+            Log.d(TAG, "Updating ${appWidgetIds.size} widgets after background fetch")
+
+            appWidgetIds.forEach { appWidgetId ->
+                // ヘッダ（最終更新時刻・ボタンなど）を更新
+                AssignmentWidgetProvider.updateAppWidget(context, appWidgetManager, appWidgetId)
+                // リスト部分を更新
+                appWidgetManager.notifyAppWidgetViewDataChanged(
+                    appWidgetId,
+                    R.id.widget_assignments_list
+                )
+            }
+            // ★ ここまで追加
 
             Log.d(TAG, "Background fetch complete: total=${distinctAssignments.size}, new=${newAssignments.size}")
             Result.success()
@@ -57,21 +75,6 @@ class AssignmentFetchWorker(
     }
 
     private fun currentEpochSeconds(): Long = System.currentTimeMillis() / 1000
-
-    private fun updateWidgets(context: Context) {
-        val appWidgetManager = AppWidgetManager.getInstance(context)
-        val componentName = ComponentName(context, AssignmentWidgetProvider::class.java)
-        val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-        
-        if (appWidgetIds.isNotEmpty()) {
-            val intent = Intent(context, AssignmentWidgetProvider::class.java).apply {
-                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
-            }
-            context.sendBroadcast(intent)
-            Log.d(TAG, "Widget update broadcast sent for ${appWidgetIds.size} widgets")
-        }
-    }
 
     private companion object {
         const val TAG = "AssignmentFetchWorker"

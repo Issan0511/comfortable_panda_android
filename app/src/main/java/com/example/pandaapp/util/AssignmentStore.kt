@@ -32,7 +32,10 @@ class AssignmentStore(context: Context) {
         val assignments = stored?.let {
             runCatching {
                 json.decodeFromString(ListSerializer(Assignment.serializer()), it)
-            }.getOrElse { emptyList() }
+            }.getOrElse { e ->
+                android.util.Log.e("AssignmentStore", "Failed to decode assignments", e)
+                emptyList()
+            }
         } ?: emptyList()
 
         val lastUpdatedSeconds = if (preferences.contains(KEY_LAST_UPDATED)) {

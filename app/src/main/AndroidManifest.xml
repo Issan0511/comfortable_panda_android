@@ -4,6 +4,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:name=".App"
@@ -32,6 +33,9 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.pandaapp.WIDGET_REFRESH" />
+                <action android:name="com.example.pandaapp.WIDGET_FETCH" />
+                <action android:name="com.example.pandaapp.WIDGET_CLEAR_RELOADING" />
             </intent-filter>
 
             <meta-data

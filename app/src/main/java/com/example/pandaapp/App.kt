@@ -105,7 +105,6 @@ fun PandaAppRoot() {
                 composable(MAIN_ROUTE) {
                     val viewModel: MainViewModel = viewModel(
                         factory = MainViewModel.provideFactory(
-                            context,
                             repository,
                             credentialsStore,
                             assignmentStore,

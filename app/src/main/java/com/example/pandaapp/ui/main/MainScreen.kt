@@ -25,7 +25,8 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun MainScreen(
-    viewModel: MainViewModel
+    viewModel: MainViewModel,
+    onNavigateToLogin: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
 
@@ -47,11 +48,23 @@ fun MainScreen(
                 }
             }
 
+            LastUpdatedLabel(lastUpdatedEpochSeconds = state.lastUpdatedEpochSeconds)
+
             Button(
                 onClick = viewModel::fetchAssignments,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = "Log in & Fetch assignments")
+            }
+
+            Button(
+                onClick = {
+                    viewModel.clearCredentialsAndNavigateToLogin()
+                    onNavigateToLogin()
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "Change Password")
             }
         }
     }
@@ -77,6 +90,15 @@ private fun AssignmentList(assignments: List<Assignment>) {
             }
         }
     }
+}
+
+@Composable
+private fun LastUpdatedLabel(lastUpdatedEpochSeconds: Long?) {
+    val label = lastUpdatedEpochSeconds?.let { timestamp ->
+        "最終更新: ${formatEpochSecondsToJst(timestamp)}"
+    } ?: "最終更新: -"
+
+    Text(text = label, style = MaterialTheme.typography.bodySmall)
 }
 
 private fun formatEpochSecondsToJst(epochSeconds: Long): String {

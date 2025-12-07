@@ -57,10 +57,14 @@ class PandaApiClient {
 
             Log.d("Panda", "Fetching login tokens (lt/execution)...")
             val tokens = fetchLoginTokens()
-            Log.d("Panda", "Tokens: lt=${tokens.lt}, exec=${tokens.execution}")
+            if (tokens == null) {
+                Log.d("Panda", "Already logged in (302). Skipping performLogin().")
+            } else {
+                Log.d("Panda", "Tokens: lt=${tokens.lt}, exec=${tokens.execution}")
 
-            Log.d("Panda", "Performing CAS login...")
-            performLogin(username, password, tokens)
+                Log.d("Panda", "Performing CAS login...")
+                performLogin(username, password, tokens)
+            }
 
             Log.d("Panda", "Establishing portal session (ticket 処理含む)...")
             val portalHtml = establishPortalSession()
@@ -83,7 +87,7 @@ class PandaApiClient {
             val allAssignments = fallCourses.flatMap { course ->
                 Log.d("Panda", "Fetching assignments for site=${course.siteId}")
                 fetchAssignmentsForSite(course).map { a ->
-                    a.copy(courseName = course.title, courseId = course.siteId)
+                    a.copy(courseName = formatCourseName(course.title), courseId = course.siteId)
                 }
             }
 
@@ -94,9 +98,15 @@ class PandaApiClient {
     // ==========================================================================
     //  Login Step 1: GET login page → extract lt / execution
     // ==========================================================================
-    private suspend fun fetchLoginTokens(): LoginTokens = withContext(Dispatchers.IO) {
+    private suspend fun fetchLoginTokens(): LoginTokens? = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(LOGIN_URL).get().build()
         client.newCall(request).execute().use { response ->
+            // 302 → 既にログイン済みなので lt/execution 取得不要
+            if (response.code in 300..399) {
+                Log.d("Panda", "CAS login page returned ${response.code}; assuming session already valid")
+                return@use null
+            }
+
             val body = response.body?.string().orEmpty()
             val document = Jsoup.parse(body)
 
@@ -142,7 +152,20 @@ class PandaApiClient {
                     val ticketReq = Request.Builder().url(loc).get().build()
                     client.newCall(ticketReq).execute().use { /* body 捨てる */ }
                 }
-            } else if (response.code !in 200..299) {
+            } else if (response.code in 200..299) {
+                val body = response.body?.string().orEmpty()
+                val document = Jsoup.parse(body)
+
+                val errorMsg = document.select("div.errors, #msg.errors").text()
+                val stillOnLogin = document.select("form#fm1 input[name=lt]").isNotEmpty()
+
+                if (errorMsg.isNotBlank()) {
+                    error("パスワードが間違っています。")
+                }
+                if (stillOnLogin) {
+                    error("Authentication failed (still on CAS login page).")
+                }
+            } else {
                 error("Login failed with HTTP status ${response.code}")
             }
         }
@@ -247,6 +270,13 @@ class PandaApiClient {
                 }
             }
         }
+
+    // ==========================================================================
+    //  科目名の整形（[YYYY年～期]プレフィックスを削除）
+    // ==========================================================================
+    private fun formatCourseName(courseName: String): String {
+        return courseName.replace(Regex("""^\[[^\[\]]*\]"""), "")
+    }
 
     // ==========================================================================
     //  Data class / constants

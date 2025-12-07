@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 data class MainScreenState(
     val isLoading: Boolean = false,
     val assignments: List<Assignment> = emptyList(),
+    val lastUpdatedEpochSeconds: Long? = null,
     val error: String? = null
 )
 
@@ -29,6 +30,10 @@ class MainViewModel(
 
     private val _uiState = MutableStateFlow(MainScreenState())
     val uiState: StateFlow<MainScreenState> = _uiState.asStateFlow()
+
+    init {
+        loadAssignmentsFromStore()
+    }
 
     fun fetchAssignments() {
         viewModelScope.launch {
@@ -47,12 +52,13 @@ class MainViewModel(
             runCatching {
                 repository.fetchAssignments(credentials.username, credentials.password)
             }.onSuccess { assignments ->
-                val savedAssignments = assignmentStore.load()
-                val savedIds = savedAssignments.map { it.id }.toSet()
+                val stored = assignmentStore.load()
+                val savedIds = stored.assignments.map { it.id }.toSet()
                 val freshAssignments = assignments.distinctBy { it.id }
                 val newAssignments = freshAssignments.filterNot { it.id in savedIds }
 
-                assignmentStore.save(freshAssignments)
+                val now = currentEpochSeconds()
+                assignmentStore.save(freshAssignments, lastUpdatedEpochSeconds = now)
                 if (newAssignments.isNotEmpty()) {
                     newAssignmentNotifier.notify(newAssignments)
                 }
@@ -61,11 +67,29 @@ class MainViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        assignments = sortedAssignments
+                        assignments = sortedAssignments,
+                        lastUpdatedEpochSeconds = now
                     )
                 }
             }.onFailure { throwable ->
                 _uiState.update { it.copy(isLoading = false, error = throwable.message) }
+            }
+        }
+    }
+
+    fun clearCredentialsAndNavigateToLogin() {
+        credentialsStore.clear()
+    }
+
+    private fun loadAssignmentsFromStore() {
+        viewModelScope.launch {
+            val stored = assignmentStore.load()
+            val sortedAssignments = sortAssignments(stored.assignments)
+            _uiState.update {
+                it.copy(
+                    assignments = sortedAssignments,
+                    lastUpdatedEpochSeconds = stored.lastUpdatedEpochSeconds
+                )
             }
         }
     }
@@ -82,6 +106,8 @@ class MainViewModel(
 
         return sortedFuture + sortedPast
     }
+
+    private fun currentEpochSeconds(): Long = System.currentTimeMillis() / 1000
 
     companion object {
         fun provideFactory(

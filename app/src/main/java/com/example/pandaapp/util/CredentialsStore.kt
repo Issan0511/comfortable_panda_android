@@ -1,6 +1,7 @@
 package com.example.pandaapp.util
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
@@ -10,28 +11,44 @@ data class Credentials(
 )
 
 class CredentialsStore(context: Context) {
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    private val prefs: SharedPreferences = createEncryptedPrefs(context)
 
-    private val sharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        PREF_FILE,
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private fun createEncryptedPrefs(context: Context): SharedPreferences {
+        val fileName = PREF_FILE
+
+        fun newEncryptedPrefs(): SharedPreferences {
+            val masterKey = MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+
+            return EncryptedSharedPreferences.create(
+                context,
+                fileName,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
+
+        return try {
+            newEncryptedPrefs()
+        } catch (e: javax.crypto.AEADBadTagException) {
+            // 暗号データと鍵が噛み合っていない → データ破棄して作り直し
+            context.deleteSharedPreferences(fileName)
+            newEncryptedPrefs()
+        }
+    }
 
     fun save(credentials: Credentials) {
-        sharedPreferences.edit()
+        prefs.edit()
             .putString(KEY_USERNAME, credentials.username)
             .putString(KEY_PASSWORD, credentials.password)
             .apply()
     }
 
     fun load(): Credentials? {
-        val username = sharedPreferences.getString(KEY_USERNAME, null)
-        val password = sharedPreferences.getString(KEY_PASSWORD, null)
+        val username = prefs.getString(KEY_USERNAME, null)
+        val password = prefs.getString(KEY_PASSWORD, null)
         return if (username.isNullOrBlank() || password.isNullOrBlank()) {
             null
         } else {
@@ -40,7 +57,7 @@ class CredentialsStore(context: Context) {
     }
 
     fun clear() {
-        sharedPreferences.edit().clear().apply()
+        prefs.edit().clear().apply()
     }
 
     private companion object {

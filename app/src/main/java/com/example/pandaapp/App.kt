@@ -22,6 +22,7 @@ import com.example.pandaapp.ui.login.LoginViewModel
 import com.example.pandaapp.ui.main.MainScreen
 import com.example.pandaapp.ui.main.MainViewModel
 import com.example.pandaapp.ui.theme.PandaAppTheme
+import com.example.pandaapp.util.AssignmentStore
 import com.example.pandaapp.util.CredentialsStore
 
 class App : Application()
@@ -32,6 +33,7 @@ fun PandaAppRoot() {
         val navController = rememberNavController()
         val context = LocalContext.current
         val credentialsStore = remember { CredentialsStore(context) }
+        val assignmentStore = remember { AssignmentStore(context) }
         val repository = remember { PandaRepository(PandaApiClient()) }
         val startDestination = remember { mutableStateOf<String?>(null) }
 
@@ -66,7 +68,11 @@ fun PandaAppRoot() {
 
                 composable(MAIN_ROUTE) {
                     val viewModel: MainViewModel = viewModel(
-                        factory = MainViewModel.provideFactory(repository, credentialsStore)
+                        factory = MainViewModel.provideFactory(
+                            repository,
+                            credentialsStore,
+                            assignmentStore
+                        )
                     )
                     MainScreen(viewModel = viewModel)
                 }

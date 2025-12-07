@@ -7,6 +7,7 @@ import com.example.pandaapp.data.model.Assignment
 import com.example.pandaapp.data.repository.PandaRepository
 import com.example.pandaapp.util.AssignmentStore
 import com.example.pandaapp.util.CredentialsStore
+import com.example.pandaapp.util.NewAssignmentNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -14,7 +15,8 @@ import kotlinx.coroutines.launch
 class MainViewModel(
     private val repository: PandaRepository,
     private val credentialsStore: CredentialsStore,
-    private val assignmentStore: AssignmentStore
+    private val assignmentStore: AssignmentStore,
+    private val newAssignmentNotifier: NewAssignmentNotifier
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MainUiState())
@@ -35,8 +37,19 @@ class MainViewModel(
             runCatching {
                 repository.loginAndFetchAssignments(credentials.username, credentials.password)
             }.onSuccess { assignments ->
-                assignmentStore.save(assignments)
-                _uiState.value = _uiState.value.copy(isLoading = false, assignments = assignments)
+                val savedAssignments = assignmentStore.load()
+                val savedIds = savedAssignments.map { it.id }.toSet()
+                val freshAssignments = assignments.distinctBy { it.id }
+                val newAssignments = freshAssignments.filterNot { it.id in savedIds }
+
+                assignmentStore.save(freshAssignments)
+                if (newAssignments.isNotEmpty()) {
+                    newAssignmentNotifier.notify(newAssignments)
+                }
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    assignments = freshAssignments
+                )
             }.onFailure { throwable ->
                 _uiState.value = _uiState.value.copy(isLoading = false, error = throwable.message)
             }
@@ -54,12 +67,18 @@ class MainViewModel(
         fun provideFactory(
             repository: PandaRepository,
             credentialsStore: CredentialsStore,
-            assignmentStore: AssignmentStore
+            assignmentStore: AssignmentStore,
+            newAssignmentNotifier: NewAssignmentNotifier
         ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     @Suppress("UNCHECKED_CAST")
-                    return MainViewModel(repository, credentialsStore, assignmentStore) as T
+                    return MainViewModel(
+                        repository,
+                        credentialsStore,
+                        assignmentStore,
+                        newAssignmentNotifier
+                    ) as T
                 }
             }
     }

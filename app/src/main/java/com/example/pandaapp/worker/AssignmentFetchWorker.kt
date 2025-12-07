@@ -8,6 +8,7 @@ import com.example.pandaapp.data.repository.PandaRepository
 import com.example.pandaapp.util.AssignmentStore
 import com.example.pandaapp.util.CredentialsStore
 import com.example.pandaapp.util.NewAssignmentNotifier
+import com.example.pandaapp.util.AssignmentUpdateProcessor
 
 // ★ 追加 import
 import android.appwidget.AppWidgetManager
@@ -25,6 +26,7 @@ class AssignmentFetchWorker(
         val credentialsStore = CredentialsStore(context)
         val assignmentStore = AssignmentStore(context)
         val notifier = NewAssignmentNotifier(context)
+        val assignmentUpdateProcessor = AssignmentUpdateProcessor(assignmentStore, notifier)
         val repository = PandaRepository(context)
 
         val credentials = credentialsStore.load()
@@ -36,17 +38,7 @@ class AssignmentFetchWorker(
         return runCatching {
             Log.d(TAG, "Fetching assignments in background")
             val assignments = repository.fetchAssignments(credentials.username, credentials.password)
-            val stored = assignmentStore.load()
-            val savedIds = stored.assignments.map { it.id }.toSet()
-            val distinctAssignments = assignments.distinctBy { it.id }
-            val newAssignments = distinctAssignments.filterNot { it.id in savedIds }
-
-            val now = currentEpochSeconds()
-            assignmentStore.save(distinctAssignments, lastUpdatedEpochSeconds = now)
-
-            if (newAssignments.isNotEmpty()) {
-                notifier.notify(newAssignments)
-            }
+            val result = assignmentUpdateProcessor.process(assignments)
 
             // ★ ここから追加: ウィジェット全体を更新
             val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -66,15 +58,16 @@ class AssignmentFetchWorker(
             }
             // ★ ここまで追加
 
-            Log.d(TAG, "Background fetch complete: total=${distinctAssignments.size}, new=${newAssignments.size}")
+            Log.d(
+                TAG,
+                "Background fetch complete: total=${result.savedAssignments.size}, new=${result.newAssignments.size}"
+            )
             Result.success()
         }.getOrElse { throwable ->
             Log.e(TAG, "Background fetch failed", throwable)
             if (runAttemptCount < MAX_RETRY) Result.retry() else Result.failure()
         }
     }
-
-    private fun currentEpochSeconds(): Long = System.currentTimeMillis() / 1000
 
     private companion object {
         const val TAG = "AssignmentFetchWorker"

@@ -3,6 +3,7 @@ package com.example.pandaapp.widget
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
@@ -61,6 +62,8 @@ private class AssignmentRemoteViewsFactory(
 
         val fillInIntent = Intent().apply {
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            action = Intent.ACTION_VIEW
+            data = Uri.parse("https://panda.ecs.kyoto-u.ac.jp/portal/site/${assignment.courseId}")
         }
         remoteViews.setOnClickFillInIntent(R.id.widget_item_root, fillInIntent)
 

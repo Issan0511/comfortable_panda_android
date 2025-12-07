@@ -54,6 +54,10 @@ fun createAssignmentRemoteViews(
 
     remoteViews.setTextViewText(R.id.widget_course_name, assignment.courseName)
     remoteViews.setTextViewText(R.id.widget_assignment_title, assignment.title)
+    val submissionLabel = if (assignment.isSubmitted) "提出済み" else "未提出"
+    val submissionColor = if (assignment.isSubmitted) Color.parseColor("#2E7D32") else Color.parseColor("#D32F2F")
+    remoteViews.setTextViewText(R.id.widget_submission_status, submissionLabel)
+    remoteViews.setTextColor(R.id.widget_submission_status, submissionColor)
 
     val dueLabel = assignment.dueTimeSeconds?.let {
         val remainingTime = formatRemainingTime(it)
@@ -82,14 +86,26 @@ fun createAssignmentRemoteViews(
 
 /**
  * 課題リストをソートするロジック
- * 期限未来の課題を期限昇順、過去の課題を期限降順で表示
+ * 未提出/提出 × 期限未来/期限過ぎ の4グループで並べる
+ * それぞれのグループは期限の早い順（過去も含め昇順）
  */
 fun sortAssignments(assignments: List<Assignment>): List<Assignment> {
     val now = System.currentTimeMillis() / 1000
-    val (futureAssignments, pastAssignments) = assignments.partition {
-        it.dueTimeSeconds != null && it.dueTimeSeconds > now
-    }
 
-    return futureAssignments.sortedBy { it.dueTimeSeconds } +
-        pastAssignments.sortedByDescending { it.dueTimeSeconds }
+    fun isFuture(a: Assignment): Boolean =
+        a.dueTimeSeconds?.let { it > now } ?: true
+
+    fun timeKey(a: Assignment): Long =
+        a.dueTimeSeconds ?: Long.MAX_VALUE
+
+    val notSubmittedFuture = assignments.filter { !it.isSubmitted && isFuture(it) }
+        .sortedBy { timeKey(it) }
+    val notSubmittedPast = assignments.filter { !it.isSubmitted && !isFuture(it) }
+        .sortedBy { timeKey(it) }
+    val submittedFuture = assignments.filter { it.isSubmitted && isFuture(it) }
+        .sortedBy { timeKey(it) }
+    val submittedPast = assignments.filter { it.isSubmitted && !isFuture(it) }
+        .sortedBy { timeKey(it) }
+
+    return notSubmittedFuture + notSubmittedPast + submittedFuture + submittedPast
 }

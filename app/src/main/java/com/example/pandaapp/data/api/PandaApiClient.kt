@@ -7,6 +7,7 @@ import android.util.Log
 import com.example.pandaapp.data.model.Assignment
 import com.example.pandaapp.data.model.AssignmentResponse
 import com.example.pandaapp.data.model.Course
+import com.example.pandaapp.data.model.Submission
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -259,13 +260,15 @@ class PandaApiClient {
                 }
 
                 return@withContext parsed.assignments.map { item ->
+                    val submitted = hasUserSubmission(item.submissions)
                     Assignment(
                         id = item.id,
                         title = item.title,
                         dueTimeSeconds = item.dueTime?.epochSecond,
                         status = item.status,
                         courseName = course.title,
-                        courseId = course.siteId
+                        courseId = course.siteId,
+                        isSubmitted = submitted
                     )
                 }
             }
@@ -276,6 +279,10 @@ class PandaApiClient {
     // ==========================================================================
     private fun formatCourseName(courseName: String): String {
         return courseName.replace(Regex("""^\[[^\[\]]*\]"""), "")
+    }
+
+    private fun hasUserSubmission(submissions: List<Submission>): Boolean {
+        return submissions.any { it.userSubmission }
     }
 
     // ==========================================================================

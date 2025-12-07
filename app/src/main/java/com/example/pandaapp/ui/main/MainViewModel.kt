@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.pandaapp.data.model.Assignment
 import com.example.pandaapp.data.repository.PandaRepository
+import com.example.pandaapp.ui.component.sortAssignments
 import com.example.pandaapp.util.AssignmentStore
 import com.example.pandaapp.util.CredentialsStore
 import com.example.pandaapp.util.NewAssignmentNotifier
+import com.example.pandaapp.util.AssignmentUpdateProcessor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +32,8 @@ class MainViewModel(
 
     private val _uiState = MutableStateFlow(MainScreenState())
     val uiState: StateFlow<MainScreenState> = _uiState.asStateFlow()
+    private val assignmentUpdateProcessor =
+        AssignmentUpdateProcessor(assignmentStore, newAssignmentNotifier)
 
     init {
         loadAssignmentsFromStore()
@@ -52,23 +56,13 @@ class MainViewModel(
             runCatching {
                 repository.fetchAssignments(credentials.username, credentials.password)
             }.onSuccess { assignments ->
-                val stored = assignmentStore.load()
-                val savedIds = stored.assignments.map { it.id }.toSet()
-                val freshAssignments = assignments.distinctBy { it.id }
-                val newAssignments = freshAssignments.filterNot { it.id in savedIds }
-
-                val now = currentEpochSeconds()
-                assignmentStore.save(freshAssignments, lastUpdatedEpochSeconds = now)
-                if (newAssignments.isNotEmpty()) {
-                    newAssignmentNotifier.notify(newAssignments)
-                }
-
-                val sortedAssignments = sortAssignments(freshAssignments)
+                val result = assignmentUpdateProcessor.process(assignments)
+                val sortedAssignments = sortAssignments(result.savedAssignments)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         assignments = sortedAssignments,
-                        lastUpdatedEpochSeconds = now
+                        lastUpdatedEpochSeconds = result.lastUpdatedEpochSeconds
                     )
                 }
             }.onFailure { throwable ->
@@ -106,21 +100,6 @@ class MainViewModel(
             }
         }
     }
-
-    private fun sortAssignments(assignments: List<Assignment>): List<Assignment> {
-        val now = System.currentTimeMillis() / 1000
-
-        val (futureAssignments, pastAssignments) = assignments.partition {
-            it.dueTimeSeconds != null && it.dueTimeSeconds > now
-        }
-
-        val sortedFuture = futureAssignments.sortedBy { it.dueTimeSeconds }
-        val sortedPast = pastAssignments.sortedByDescending { it.dueTimeSeconds }
-
-        return sortedFuture + sortedPast
-    }
-
-    private fun currentEpochSeconds(): Long = System.currentTimeMillis() / 1000
 
     companion object {
         fun provideFactory(

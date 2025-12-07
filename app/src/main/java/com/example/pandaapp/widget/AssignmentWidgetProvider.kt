@@ -227,6 +227,15 @@ class AssignmentWidgetProvider : AppWidgetProvider() {
             views.setRemoteAdapter(R.id.widget_assignments_list, serviceIntent)
             views.setEmptyView(R.id.widget_assignments_list, R.id.widget_empty_view)
 
+            val clickIntent = Intent(context, AssignmentRedirectActivity::class.java)
+            val clickPendingIntent = PendingIntent.getActivity(
+                context,
+                0,
+                clickIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            )
+            views.setPendingIntentTemplate(R.id.widget_assignments_list, clickPendingIntent)
+
             val assignmentStore = AssignmentStore(context)
             val stored = assignmentStore.load()
             

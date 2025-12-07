@@ -21,7 +21,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.pandaapp.data.model.Assignment
-import com.example.pandaapp.util.formatEpochSecondsToShort
+import com.example.pandaapp.util.formatEpochSecondsToJst
 
 /**
  * 課題アイテムを表示するComposable
@@ -33,7 +33,7 @@ fun AssignmentItemComposable(
     onClick: (Assignment) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val deadlineColor = getDeadlineColor(assignment.dueTimeSeconds)
+    val deadlineColor = getDeadlineColor(assignment.dueTimeSeconds, assignment.isSubmitted)
 
     Column(
         modifier = modifier
@@ -47,7 +47,7 @@ fun AssignmentItemComposable(
             .padding(12.dp)
     ) {
         val submissionLabel = if (assignment.isSubmitted) "提出済み" else "未提出"
-        val submissionColor = if (assignment.isSubmitted) Color(0xFF2E7D32) else Color(0xFFD32F2F)
+        val submissionColor = if (assignment.isSubmitted) Color(0xFF2196F3) else Color(0xFFD32F2F)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -62,14 +62,25 @@ fun AssignmentItemComposable(
         }
         Text(text = assignment.title, style = MaterialTheme.typography.bodyLarge)
         assignment.dueTimeSeconds?.let {
-            val formattedDate = formatEpochSecondsToShort(it)
+            val formattedDate = formatEpochSecondsToJst(it)
             val remainingTime = formatRemainingTime(it)
-            
+
             val annotatedString = buildAnnotatedString {
                 withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
                     append(remainingTime)
                 }
-                append("($formattedDate)")
+                append("(")
+                // Bold minute part in formattedDate (assumes HH:mm at the end)
+                val colonIndex = formattedDate.lastIndexOf(':')
+                if (colonIndex >= 0 && colonIndex < formattedDate.length - 1) {
+                    append(formattedDate.substring(0, colonIndex + 1))
+                    withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(formattedDate.substring(colonIndex + 1))
+                    }
+                } else {
+                    append(formattedDate)
+                }
+                append(")")
             }
             
             Text(

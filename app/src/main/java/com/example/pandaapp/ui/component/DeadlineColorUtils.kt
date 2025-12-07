@@ -6,16 +6,20 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * 締め切りまでの時間に応じて色を決定
- * - 締め切り経過 → 青
+ * - 提出済み → 青
+ * - 締め切り経過（未提出） → 灰色
  * - 24時間以内 → 赤
- * - 120時間以内 → 黄色
- * - 336時間以内 → 緑
- * - それ以上 → 灰色
+ * - 120時間以内（5日以内） → 黄色
+ * - 336時間以内（14日以内） → 緑
+ * - それ以上 → 無色（透明）
  */
 @Composable
-fun getDeadlineColor(dueTimeSeconds: Long?): Color {
+fun getDeadlineColor(dueTimeSeconds: Long?, isSubmitted: Boolean): Color {
+    if (isSubmitted) {
+        return Color(0xFF2196F3) // Blue for submitted
+    }
     if (dueTimeSeconds == null) {
-        return MaterialTheme.colorScheme.outline
+        return Color.Transparent
     }
 
     val now = System.currentTimeMillis() / 1000
@@ -24,8 +28,8 @@ fun getDeadlineColor(dueTimeSeconds: Long?): Color {
 
     return when {
         remainingSeconds <= 0 -> {
-            // 締め切り経過 → 青
-            Color(0xFF2196F3) // Material Blue
+            // 締め切り経過（未提出） → 灰色
+            MaterialTheme.colorScheme.outline
         }
         remainingHours < 24 -> {
             // 24時間以内 → 赤
@@ -40,8 +44,8 @@ fun getDeadlineColor(dueTimeSeconds: Long?): Color {
             Color(0xFF4CAF50) // Material Green
         }
         else -> {
-            // それ以上 → 灰色
-            MaterialTheme.colorScheme.outline
+            // それ以上 → 無色（透明）
+            Color.Transparent
         }
     }
 }
@@ -58,20 +62,19 @@ fun formatRemainingTime(dueTimeSeconds: Long?): String {
     val now = System.currentTimeMillis() / 1000
     val remainingSeconds = dueTimeSeconds - now
 
+    if (remainingSeconds <= 0) return "締め切り経過"
+
+    val days = remainingSeconds / 86400
+    val hours = (remainingSeconds % 86400) / 3600
+    val minutes = (remainingSeconds % 3600) / 60
+
+    val parts = mutableListOf<String>()
+    if (days > 0) parts.add("${days}日")
+    if (hours > 0) parts.add("${hours}時間")
+    if (minutes > 0) parts.add("${minutes}分")
+
     return when {
-        remainingSeconds <= 0 -> "締め切り経過"
-        remainingSeconds < 3600 -> {
-            val minutes = remainingSeconds / 60
-            "${minutes}分"
-        }
-        remainingSeconds < 86400 -> {
-            val hours = remainingSeconds / 3600
-            "${hours}時間"
-        }
-        else -> {
-            val days = remainingSeconds / 86400
-            val hours = (remainingSeconds % 86400) / 3600
-            "${days}日${hours}時間"
-        }
+        parts.isEmpty() -> "0分"
+        else -> parts.joinToString(separator = "")
     }
 }

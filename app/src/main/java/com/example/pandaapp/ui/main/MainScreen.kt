@@ -19,9 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.pandaapp.data.model.Assignment
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.example.pandaapp.util.formatEpochSecondsToJst
 
 @Composable
 fun MainScreen(
@@ -101,10 +99,3 @@ private fun LastUpdatedLabel(lastUpdatedEpochSeconds: Long?) {
     Text(text = label, style = MaterialTheme.typography.bodySmall)
 }
 
-private fun formatEpochSecondsToJst(epochSeconds: Long): String {
-    val instant = Instant.ofEpochSecond(epochSeconds)
-    val zoneId = ZoneId.of("Asia/Tokyo")
-    val zonedDateTime = instant.atZone(zoneId)
-    val formatter = DateTimeFormatter.ofPattern("M月d日 HH:mm")
-    return formatter.format(zonedDateTime)
-}

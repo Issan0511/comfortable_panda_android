@@ -23,6 +23,7 @@ import com.example.pandaapp.ui.main.MainViewModel
 import com.example.pandaapp.ui.theme.PandaAppTheme
 import com.example.pandaapp.util.AssignmentStore
 import com.example.pandaapp.util.CredentialsStore
+import com.example.pandaapp.util.NewAssignmentNotifier
 
 class App : Application()
 
@@ -33,7 +34,8 @@ fun PandaAppRoot() {
         val context = LocalContext.current
         val credentialsStore = remember { CredentialsStore(context) }
         val assignmentStore = remember { AssignmentStore(context) }
-        val repository = remember { PandaRepository(context) }
+        val newAssignmentNotifier = remember { NewAssignmentNotifier(context) }
+        val repository = remember { PandaRepository(PandaApiClient()) }
         val startDestination = remember { mutableStateOf<String?>(null) }
 
         LaunchedEffect(Unit) {
@@ -70,7 +72,8 @@ fun PandaAppRoot() {
                         factory = MainViewModel.provideFactory(
                             repository,
                             credentialsStore,
-                            assignmentStore
+                            assignmentStore,
+                            newAssignmentNotifier
                         )
                     )
                     MainScreen(viewModel = viewModel)

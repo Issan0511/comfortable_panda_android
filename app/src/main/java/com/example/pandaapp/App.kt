@@ -15,7 +15,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.pandaapp.data.api.PandaApiClient
 import com.example.pandaapp.data.repository.PandaRepository
 import com.example.pandaapp.ui.login.LoginScreen
 import com.example.pandaapp.ui.login.LoginViewModel
@@ -34,7 +33,7 @@ fun PandaAppRoot() {
         val context = LocalContext.current
         val credentialsStore = remember { CredentialsStore(context) }
         val assignmentStore = remember { AssignmentStore(context) }
-        val repository = remember { PandaRepository(PandaApiClient()) }
+        val repository = remember { PandaRepository(context) }
         val startDestination = remember { mutableStateOf<String?>(null) }
 
         LaunchedEffect(Unit) {

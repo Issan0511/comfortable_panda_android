@@ -35,7 +35,7 @@ fun PandaAppRoot() {
         val credentialsStore = remember { CredentialsStore(context) }
         val assignmentStore = remember { AssignmentStore(context) }
         val newAssignmentNotifier = remember { NewAssignmentNotifier(context) }
-        val repository = remember { PandaRepository(PandaApiClient()) }
+        val repository = remember { PandaRepository(context) }
         val startDestination = remember { mutableStateOf<String?>(null) }
 
         LaunchedEffect(Unit) {

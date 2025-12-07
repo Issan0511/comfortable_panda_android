@@ -32,18 +32,20 @@ class MainViewModel(
 
     fun fetchAssignments() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             val credentials = credentialsStore.load()
             if (credentials == null) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = "Credentials not found."
-                )
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Credentials not found."
+                    )
+                }
                 return@launch
             }
 
             runCatching {
-                repository.loginAndFetchAssignments(credentials.username, credentials.password)
+                repository.fetchAssignments(credentials.username, credentials.password)
             }.onSuccess { assignments ->
                 val savedAssignments = assignmentStore.load()
                 val savedIds = savedAssignments.map { it.id }.toSet()
@@ -54,12 +56,16 @@ class MainViewModel(
                 if (newAssignments.isNotEmpty()) {
                     newAssignmentNotifier.notify(newAssignments)
                 }
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    assignments = freshAssignments
-                )
+
+                val sortedAssignments = sortAssignments(freshAssignments)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        assignments = sortedAssignments
+                    )
+                }
             }.onFailure { throwable ->
-                _uiState.value = _uiState.value.copy(isLoading = false, error = throwable.message)
+                _uiState.update { it.copy(isLoading = false, error = throwable.message) }
             }
         }
     }

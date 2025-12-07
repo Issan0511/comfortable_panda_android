@@ -22,6 +22,7 @@ data class DueTime(
     @SerialName("epochSecond") val epochSecond: Long? = null
 )
 
+@Serializable
 data class Assignment(
     val id: String,
     val title: String,

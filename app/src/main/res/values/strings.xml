@@ -4,4 +4,6 @@
     <string name="notification_channel_description">新しい課題が追加されたときに通知します。</string>
     <string name="notification_new_assignment_title">%1$s に新しい課題</string>
     <string name="notification_new_assignment_message">%1$s</string>
+    <string name="widget_title">課題一覧</string>
+    <string name="widget_empty">保存された課題がありません</string>
 </resources>

@@ -29,7 +29,7 @@ class PandaApiClient {
     private val logging = HttpLoggingInterceptor { msg ->
         Log.d("PandaNet", msg)
     }.apply {
-        level = HttpLoggingInterceptor.Level.BODY   // ※必要に応じて BASIC などに落とす
+        level = HttpLoggingInterceptor.Level.NONE   // ログ無効化
     }
 
     // -------------------------
@@ -281,10 +281,9 @@ class PandaApiClient {
         return courseName.replace(Regex("""^\[[^\[\]]*\]"""), "")
     }
 
-    private fun hasUserSubmission(submissions: List<Submission>): Boolean {
-        return submissions.any { it.userSubmission }
+    private fun hasUserSubmission(submissions: List<Submission>?): Boolean {
+        return submissions?.any { it.userSubmission } ?: false
     }
-
     // ==========================================================================
     //  Data class / constants
     // ==========================================================================

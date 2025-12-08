@@ -15,7 +15,8 @@ data class AssignmentItem(
     val title: String = "",
     @SerialName("dueTime") val dueTime: DueTime? = null,
     val status: String? = null,
-    val submissions: List<Submission> = emptyList()
+    val submissions: List<Submission>? = null
+
 )
 
 @Serializable

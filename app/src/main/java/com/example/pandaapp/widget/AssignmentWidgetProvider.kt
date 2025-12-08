@@ -134,7 +134,7 @@ class AssignmentWidgetProvider : AppWidgetProvider() {
         private const val REFRESH_ACTION = "com.example.pandaapp.WIDGET_REFRESH"
         private const val FETCH_ACTION = "com.example.pandaapp.WIDGET_FETCH"
         private const val CLEAR_RELOADING_ACTION = "com.example.pandaapp.WIDGET_CLEAR_RELOADING"
-        private const val UPDATE_INTERVAL_MS = 30_000L // 30sごと
+        private const val UPDATE_INTERVAL_MS = 300_000L // 5ｍごと
         private const val PREFS_NAME = "widget_state"
         private const val KEY_RELOADING = "is_reloading"
 
